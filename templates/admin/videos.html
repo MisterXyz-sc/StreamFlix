@@ -1,1 +1,295 @@
+{% extends "base.html" %}
 
+{% block title %}Kelola Video - Admin StreamFlix{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold">Kelola Video</h1>
+        <a href="{{ url_for('admin.add_video') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Tambah Video Baru
+        </a>
+    </div>
+
+    <!-- Filter dan Urutan dengan JavaScript -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="categoryFilter" class="form-label">Filter Kategori</label>
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">Semua Kategori</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="sortSelect" class="form-label">Urutkan Berdasarkan</label>
+                    <select id="sortSelect" class="form-select">
+                        <option value="newest">Terbaru</option>
+                        <option value="oldest">Terlama</option>
+                        <option value="title_asc">Judul A-Z</option>
+                        <option value="title_desc">Judul Z-A</option>
+                        <option value="price_high">Harga Tertinggi</option>
+                        <option value="price_low">Harga Terendah</option>
+                        <option value="category">Kategori</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="typeFilter" class="form-label">Tipe Video</label>
+                    <select id="typeFilter" class="form-select">
+                        <option value="">Semua Tipe</option>
+                        <option value="premium">Premium</option>
+                        <option value="free">Gratis</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            {% if videos %}
+            <!-- Info Filter Aktif -->
+            <div id="filterInfo" class="alert alert-info d-none mb-3">
+                <i class="bi bi-filter"></i> Filter aktif: <span id="filterText"></span>
+                <button id="resetFilter" class="btn btn-sm btn-outline-info ms-2">Reset Filter</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Thumbnail</th>
+                            <th>Judul</th>
+                            <th>Kategori</th>
+                            <th>Harga</th>
+                            <th>Tipe</th>
+                            <th>Tanggal</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="videoTableBody">
+                        {% for video in videos %}
+                        <tr class="video-row" 
+                            data-category="{{ video.category_id or '' }}"
+                            data-type="{{ 'premium' if video.is_premium else 'free' }}"
+                            data-title="{{ video.title.lower() }}"
+                            data-price="{{ video.price }}"
+                            data-date="{{ video.created_at.timestamp() }}"
+                            data-category-name="{{ video.category.name if video.category else 'zzz' }}">
+                            <td>
+                                <!-- VIDEO THUMBNAIL (UPDATED) -->
+                                <video preload="metadata" class="thumbnail-video" style="width: 80px; height: 45px; object-fit: cover;">
+                                    <source src="{{ video.embed_url }}" type="video/mp4">
+                                    Your browser does not support video tag.
+                                </video>
+                            </td>
+                            <td>
+                                <strong>{{ video.title }}</strong>
+                                <br>
+                                <small class="text-muted">{{ video.embed_url[:50] }}...</small>
+                            </td>
+                            <td>
+                                {% if video.category %}
+                                    <span class="badge bg-info">{{ video.category.name }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Tidak Berkategori</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.is_premium %}
+                                    <span class="text-warning fw-bold">Rp {{ "%.0f"|format(video.price) }}</span>
+                                {% else %}
+                                    <span class="text-success">Gratis</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.is_premium %}
+                                    <span class="badge bg-warning">Premium</span>
+                                {% else %}
+                                    <span class="badge bg-success">Gratis</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ video.created_at.strftime('%d %b %Y') }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('admin.edit_video', video_id=video.id) }}" 
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{{ url_for('admin.delete_video', video_id=video.id) }}" 
+                                       class="btn btn-outline-danger"
+                                       onclick="return confirm('Yakin hapus video ini?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Counter -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Menampilkan <span id="videoCount">{{ videos|length }}</span> dari {{ videos|length }} video
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-film display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Belum ada video</h4>
+                <p class="text-muted">Mulai dengan menambahkan video pertama Anda</p>
+                <a href="{{ url_for('admin.add_video') }}" class="btn btn-primary mt-2">
+                    <i class="bi bi-plus-circle me-1"></i>Tambah Video Pertama
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript untuk Filter dan Sorting -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryFilter = document.getElementById('categoryFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const typeFilter = document.getElementById('typeFilter');
+    const videoTableBody = document.getElementById('videoTableBody');
+    const videoRows = document.querySelectorAll('.video-row');
+    const videoCount = document.getElementById('videoCount');
+    const filterInfo = document.getElementById('filterInfo');
+    const filterText = document.getElementById('filterText');
+    const resetFilter = document.getElementById('resetFilter');
+
+    // Inisialisasi categories dari template
+    const categories = {
+        {% for category in categories %}
+        '{{ category.id }}': '{{ category.name }}',
+        {% endfor %}
+    };
+
+    function applyFiltersAndSort() {
+        const selectedCategory = categoryFilter.value;
+        const selectedType = typeFilter.value;
+        const sortBy = sortSelect.value;
+        
+        let visibleRows = 0;
+        let activeFilters = [];
+
+        // Apply filters
+        videoRows.forEach(row => {
+            let showRow = true;
+
+            // Filter kategori
+            if (selectedCategory && row.dataset.category !== selectedCategory) {
+                showRow = false;
+            }
+
+            // Filter tipe
+            if (selectedType && row.dataset.type !== selectedType) {
+                showRow = false;
+            }
+
+            // Tampilkan/sembunyikan baris
+            if (showRow) {
+                row.style.display = '';
+                visibleRows++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Apply sorting
+        const visibleVideoRows = Array.from(videoRows).filter(row => row.style.display !== 'none');
+        
+        visibleVideoRows.sort((a, b) => {
+            switch(sortBy) {
+                case 'newest':
+                    return parseFloat(b.dataset.date) - parseFloat(a.dataset.date);
+                case 'oldest':
+                    return parseFloat(a.dataset.date) - parseFloat(b.dataset.date);
+                case 'title_asc':
+                    return a.dataset.title.localeCompare(b.dataset.title);
+                case 'title_desc':
+                    return b.dataset.title.localeCompare(a.dataset.title);
+                case 'price_high':
+                    return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+                case 'price_low':
+                    return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+                case 'category':
+                    return a.dataset.categoryName.localeCompare(b.dataset.categoryName);
+                default:
+                    return 0;
+            }
+        });
+
+        // Reorder rows in table
+        visibleVideoRows.forEach(row => {
+            videoTableBody.appendChild(row);
+        });
+
+        // Update counter
+        videoCount.textContent = visibleRows;
+
+        // Update filter info
+        if (selectedCategory || selectedType || sortBy !== 'newest') {
+            let filterMessages = [];
+            
+            if (selectedCategory) {
+                filterMessages.push(`Kategori: ${categories[selectedCategory]}`);
+            }
+            if (selectedType) {
+                filterMessages.push(`Tipe: ${selectedType === 'premium' ? 'Premium' : 'Gratis'}`);
+            }
+            if (sortBy !== 'newest') {
+                const sortNames = {
+                    'oldest': 'Terlama',
+                    'title_asc': 'Judul A-Z',
+                    'title_desc': 'Judul Z-A',
+                    'price_high': 'Harga Tertinggi',
+                    'price_low': 'Harga Terendah',
+                    'category': 'Kategori'
+                };
+                filterMessages.push(`Urutan: ${sortNames[sortBy]}`);
+            }
+            
+            filterText.textContent = filterMessages.join(' | ');
+            filterInfo.classList.remove('d-none');
+        } else {
+            filterInfo.classList.add('d-none');
+        }
+    }
+
+    // Event listeners
+    categoryFilter.addEventListener('change', applyFiltersAndSort);
+    typeFilter.addEventListener('change', applyFiltersAndSort);
+    sortSelect.addEventListener('change', applyFiltersAndSort);
+
+    resetFilter.addEventListener('click', function() {
+        categoryFilter.value = '';
+        typeFilter.value = '';
+        sortSelect.value = 'newest';
+        applyFiltersAndSort();
+    });
+
+    // Initial apply
+    applyFiltersAndSort();
+});
+</script>
+
+<style>
+.video-row {
+    transition: all 0.3s ease;
+}
+
+.video-row:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

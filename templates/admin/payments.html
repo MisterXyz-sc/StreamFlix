@@ -1,0 +1,965 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Pembayaran - Admin StreamFlux{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold">Kelola Pembayaran</h1>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.export_payments') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-download me-1"></i>Export
+            </a>
+            <span class="badge bg-warning text-dark fs-6">
+                <i class="bi bi-clock me-1"></i>{{ total_pending }} Pending
+            </span>
+        </div>
+    </div>
+
+        <!-- Statistics Cards (tetap sama) -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Pending</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_pending }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-clock-history fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Completed</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_completed }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Rejected</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_rejected }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-x-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Semua</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ payments|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-receipt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Filter Section (tetap sama) -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h6 class="mb-0">Filter Status Pembayaran:</h6>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <a href="{{ url_for('admin.payments') }}?status=all" 
+                           class="btn btn-sm btn-outline-secondary {% if status_filter == 'all' %}active{% endif %}">
+                            Semua ({{ payments|length }})
+                        </a>
+                        <a href="{{ url_for('admin.payments') }}?status=pending" 
+                           class="btn btn-sm btn-outline-warning {% if status_filter == 'pending' %}active{% endif %}">
+                            Pending ({{ total_pending }})
+                        </a>
+                        <a href="{{ url_for('admin.payments') }}?status=completed" 
+                           class="btn btn-sm btn-outline-success {% if status_filter == 'completed' %}active{% endif %}">
+                            Completed ({{ total_completed }})
+                        </a>
+                        <a href="{{ url_for('admin.payments') }}?status=rejected" 
+                           class="btn btn-sm btn-outline-danger {% if status_filter == 'rejected' %}active{% endif %}">
+                            Rejected ({{ total_rejected }})
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            {% if payments %}
+            <form id="bulkActionForm" method="POST" action="{{ url_for('admin.bulk_approve_payments') }}">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="30">
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                </th>
+                                <th>User & Details</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Pengirim</th>
+                                <th width="120">Bukti Transfer</th>
+                                <th>Status</th>
+                                <th>Tanggal</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr class="{% if payment.status == 'pending' %}table-warning{% elif payment.status == 'completed' %}table-success{% elif payment.status == 'rejected' %}table-danger{% endif %}">
+                                <td>
+                                    {% if payment.status == 'pending' %}
+                                    <input type="checkbox" name="payment_ids" value="{{ payment.id }}" class="payment-checkbox">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ payment.user.email }}</strong>
+                                        <br>
+                                        <small class="text-muted">ID: {{ payment.user.id }}</small>
+                                        {% if payment.admin_notes %}
+                                        <br>
+                                        <small class="text-danger">
+                                            <i class="bi bi-info-circle me-1"></i>{{ payment.admin_notes }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="fw-bold text-success">Rp {{ "{:,.0f}".format(payment.amount) }}</td>
+                                <td>
+                                    <span class="badge bg-secondary text-uppercase">
+                                        {% if payment.payment_method in ['dana','ovo','gopay'] %}
+                                        <i class="bi bi-telephone me-1"></i>
+                                        {% else %}
+                                        <i class="bi bi-bank me-1"></i>
+                                        {% endif %}
+                                        {{ payment.payment_method }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if payment.sender_name %}
+                                        <div class="text-primary fw-bold">{{ payment.sender_name }}</div>
+                                        <small class="text-muted">Transfer ke: 082320781747</small>
+                                    {% else %}
+                                        <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if payment.proof_url and payment.proof_url != '' %}
+                                        <div class="proof-container">
+                                            <!-- Thumbnail bukti transfer -->
+                                            <div class="proof-thumbnail-card" onclick="openProofModal('{{ payment.id }}')">
+                                                <div class="proof-image-wrapper">
+                                                    <img src="{{ url_for('admin.payment_proof', filename=payment.proof_url) }}" 
+                                                         alt="Bukti Transfer" 
+                                                         class="proof-thumbnail"
+                                                         onerror="this.onerror=null; this.src='{{ url_for('static', filename='img/image-placeholder.jpg') }}'">
+                                                    <div class="proof-overlay">
+                                                        <i class="bi bi-zoom-in"></i>
+                                                        <span>Lihat Bukti</span>
+                                                    </div>
+                                                </div>
+                                                <div class="proof-info">
+                                                    <small class="text-muted">{{ payment.proof_url|truncate(15) }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Data untuk modal (hidden) -->
+                                        <div id="paymentData{{ payment.id }}" 
+                                             data-email="{{ payment.user.email }}"
+                                             data-amount="{{ payment.amount }}"
+                                             data-method="{{ payment.payment_method }}"
+                                             data-sender="{{ payment.sender_name or 'Tidak dicantumkan' }}"
+                                             data-status="{{ payment.status }}"
+                                             data-date="{{ payment.created_at.strftime('%d %B %Y %H:%M WIB') }}"
+                                             data-file="{{ payment.proof_url }}"
+                                             data-image="{{ url_for('admin.payment_proof', filename=payment.proof_url ) }}"
+                                             style="display: none;">
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Tidak ada bukti
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if payment.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-lg me-1"></i>Completed
+                                    </span>
+                                    {% elif payment.status == 'pending' %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-clock me-1"></i>Pending
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-lg me-1"></i>Rejected
+                                    </span>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">{{ payment.updated_at.strftime('%d/%m %H:%M') }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ payment.created_at.strftime('%d/%m/%Y') }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ payment.created_at.strftime('%H:%M') }}</small>
+                                </td>
+                                <td>
+                                    {% if payment.status == 'pending' %}
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('admin.approve_payment', payment_id=payment.id) }}" 
+                                           class="btn btn-success approve-btn"
+                                           data-amount="{{ payment.amount }}"
+                                           data-email="{{ payment.user.email }}">
+                                            <i class="bi bi-check-lg"></i> Approve
+                                        </a>
+                                        <button type="button" class="btn btn-danger" onclick="openRejectModal('{{ payment.id }}')">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Data untuk modal tolak (hidden) -->
+                                    <div id="rejectData{{ payment.id }}" 
+                                         data-email="{{ payment.user.email }}"
+                                         data-amount="{{ payment.amount }}"
+                                         data-method="{{ payment.payment_method }}"
+                                         data-sender="{{ payment.sender_name or '-' }}"
+                                         data-action-url="{{ url_for('admin.reject_payment', payment_id=payment.id) }}"
+                                         style="display: none;">
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions -->
+                {% if payments|selectattr("status", "equalto", "pending")|list %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span id="selectedCount">0</span> pembayaran dipilih
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-success btn-sm" id="bulkApproveBtn" disabled>
+                                <i class="bi bi-check-all me-1"></i>Approve Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-receipt display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Belum ada pembayaran</h4>
+                <p class="text-muted">Belum ada transaksi pembayaran yang tercatat.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Custom Proof Modal -->
+<div id="proofModal" class="custom-modal">
+    <div class="custom-modal-backdrop" onclick="closeProofModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-receipt me-2 fs-4"></i>
+                <div>
+                    <h5 class="custom-modal-title">Bukti Transfer</h5>
+                    <small class="opacity-75" id="modalUserEmail"></small>
+                </div>
+            </div>
+            <button type="button" class="custom-modal-close" onclick="closeProofModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <div class="custom-modal-body">
+            <div class="row g-0 h-100">
+                <!-- Gambar Bukti -->
+                <div class="col-lg-8">
+                    <div class="proof-modal-image-container">
+                        <img src="" alt="Bukti Transfer" class="proof-modal-image" id="modalProofImage">
+                        <div class="image-actions">
+                            <button type="button" class="btn btn-light btn-sm" onclick="zoomImage('in')">
+                                <i class="bi bi-zoom-in"></i>
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" onclick="zoomImage('out')">
+                                <i class="bi bi-zoom-out"></i>
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" onclick="resetImage()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Detail Pembayaran -->
+                <div class="col-lg-4">
+                    <div class="payment-details-sidebar h-100">
+                        <div class="p-4">
+                            <h6 class="fw-bold border-bottom pb-2 mb-3">Detail Transaksi</h6>
+                            
+                            <div class="detail-item">
+                                <small class="text-muted">User Email</small>
+                                <div class="fw-bold text-truncate" id="modalEmail"></div>
+                            </div>
+                            
+                            <div class="detail-item mt-3">
+                                <small class="text-muted">Jumlah Transfer</small>
+                                <div class="h5 text-success fw-bold" id="modalAmount"></div>
+                            </div>
+                            
+                            <div class="detail-item mt-3">
+                                <small class="text-muted">Metode Pembayaran</small>
+                                <div>
+                                    <span class="badge bg-primary text-uppercase" id="modalMethod"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-item mt-3">
+                                <small class="text-muted">Nama Pengirim</small>
+                                <div class="fw-bold text-primary" id="modalSender"></div>
+                            </div>
+                            
+                            <div class="detail-item mt-3">
+                                <small class="text-muted">Status</small>
+                                <div id="modalStatus"></div>
+                            </div>
+                            
+                            <div class="detail-item mt-3">
+                                <small class="text-muted">Tanggal Transaksi</small>
+                                <div class="fw-bold" id="modalDate"></div>
+                            </div>
+                            
+                            <div class="detail-item mt-3">
+                                <small class="text-muted">File</small>
+                                <div class="small text-muted" id="modalFile"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="custom-modal-footer">
+            <div class="d-flex justify-content-between w-100">
+                <div>
+                    <a href="#" target="_blank" class="btn btn-outline-primary btn-sm" id="modalFullSizeLink">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Buka di Tab Baru
+                    </a>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeProofModal()">
+                        <i class="bi bi-x-lg me-1"></i>Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Reject Modal -->
+<div id="rejectModal" class="custom-modal">
+    <div class="custom-modal-backdrop" onclick="closeRejectModal()"></div>
+    <div class="custom-modal-content" style="max-width: 600px; height: auto;">
+        <div class="custom-modal-header bg-danger">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle me-2 fs-4"></i>
+                <div>
+                    <h5 class="custom-modal-title">Tolak Pembayaran</h5>
+                    <small class="opacity-75" id="rejectModalUserEmail"></small>
+                </div>
+            </div>
+            <button type="button" class="custom-modal-close" onclick="closeRejectModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <form id="rejectForm" method="POST">
+            <div class="custom-modal-body p-4">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Anda akan menolak pembayaran berikut:
+                </div>
+                
+                <table class="table table-sm table-borderless bg-dark rounded mb-4">
+                    <tr>
+                        <td width="30%"><strong>User:</strong></td>
+                        <td id="rejectEmail"></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Amount:</strong></td>
+                        <td class="text-success fw-bold" id="rejectAmount"></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Method:</strong></td>
+                        <td id="rejectMethod"></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pengirim:</strong></td>
+                        <td id="rejectSender"></td>
+                    </tr>
+                </table>
+                
+                <div class="mb-3">
+                    <label for="rejectionNotes" class="form-label text-light">
+                        <i class="bi bi-chat-left-text me-1"></i>Alasan Penolakan
+                    </label>
+                    <textarea class="form-control bg-dark border-secondary text-light" 
+                              id="rejectionNotes" 
+                              name="rejection_notes" 
+                              rows="4" 
+                              placeholder="Berikan alasan penolakan (wajib)..."
+                              required></textarea>
+                    <div class="form-text text-light opacity-75">
+                        Alasan penolakan akan dilihat oleh user.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="custom-modal-footer">
+                <div class="d-flex justify-content-between w-100">
+                    <button type="button" class="btn btn-secondary" onclick="closeRejectModal()">
+                        <i class="bi bi-arrow-left me-1"></i>Batal
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle me-1"></i>Tolak Pembayaran
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Thumbnail Styles */
+.proof-thumbnail-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    padding: 8px;
+    border: 1px solid #e9ecef;
+    background: white;
+    max-width: 120px;
+}
+
+.proof-thumbnail-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #0d6efd;
+}
+
+.proof-image-wrapper {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.proof-thumbnail {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+}
+
+.proof-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: white;
+    border-radius: 6px;
+}
+
+.proof-thumbnail-card:hover .proof-overlay {
+    opacity: 1;
+}
+
+.proof-overlay i {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+}
+
+.proof-overlay span {
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.proof-info {
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* Custom Modal Styles */
+.custom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+}
+
+.custom-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(2px);
+}
+
+.custom-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 95%;
+    height: 90%;
+    max-width: 1400px;
+    background: #1a1d23;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #334155;
+}
+
+.custom-modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+}
+
+.custom-modal-header.bg-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+}
+
+.custom-modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.custom-modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.custom-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.custom-modal-body {
+    flex: 1;
+    overflow: hidden;
+    background: #1a1d23;
+}
+
+.custom-modal-body.p-4 {
+    overflow-y: auto;
+    max-height: calc(100% - 120px);
+}
+
+.custom-modal-footer {
+    background: #2d3748;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #334155;
+}
+
+/* Image Container */
+.proof-modal-image-container {
+    position: relative;
+    height: 100%;
+    background: #0f1117;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 20px;
+}
+
+.proof-modal-image {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+    border-radius: 8px;
+}
+
+.image-actions {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(45, 55, 72, 0.9);
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border: 1px solid #4a5568;
+}
+
+.payment-details-sidebar {
+    background: #1a1d23;
+    border-left: 1px solid #334155;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.detail-item {
+    padding-bottom: 16px;
+    border-bottom: 1px solid #2d3748;
+    color: #e2e8f0;
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item small {
+    color: #94a3b8 !important;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Table Styles */
+.table-borderless td {
+    border: none !important;
+    padding: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .proof-thumbnail {
+        width: 60px;
+        height: 45px;
+    }
+    
+    .proof-thumbnail-card {
+        max-width: 80px;
+    }
+    
+    .custom-modal-content {
+        width: 98%;
+        height: 95%;
+    }
+    
+    .custom-modal-body .row {
+        flex-direction: column;
+    }
+    
+    .payment-details-sidebar {
+        border-left: none;
+        border-top: 1px solid #334155;
+        max-height: 40%;
+    }
+    
+    .proof-modal-image-container {
+        max-height: 60%;
+    }
+    
+    .custom-modal-content[style*="max-width: 600px"] {
+        width: 95%;
+        height: auto;
+        max-height: 90%;
+    }
+}
+
+/* Animation */
+.custom-modal {
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.custom-modal-content {
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -48%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variabel global untuk state modal
+let currentImageScale = 1;
+let currentRejectPaymentId = null;
+
+// Fungsi untuk select all checkboxes
+function toggleSelectAll(source) {
+    const checkboxes = document.getElementsByClassName('payment-checkbox');
+    for (let checkbox of checkboxes) {
+        checkbox.checked = source.checked;
+    }
+    updateSelectedCount();
+}
+
+// Update selected count
+function updateSelectedCount() {
+    const checkboxes = document.getElementsByClassName('payment-checkbox');
+    let count = 0;
+    for (let checkbox of checkboxes) {
+        if (checkbox.checked) count++;
+    }
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('bulkApproveBtn').disabled = count === 0;
+}
+
+// Buka modal bukti transfer
+function openProofModal(paymentId) {
+    const paymentData = document.getElementById('paymentData' + paymentId);
+    const modal = document.getElementById('proofModal');
+    
+    // Isi data ke modal
+    document.getElementById('modalUserEmail').textContent = paymentData.dataset.email;
+    document.getElementById('modalEmail').textContent = paymentData.dataset.email;
+    document.getElementById('modalAmount').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(paymentData.dataset.amount);
+    document.getElementById('modalMethod').innerHTML = `<i class="bi bi-${paymentData.dataset.method in ['dana','ovo','gopay'] ? 'telephone' : 'bank'} me-1"></i>${paymentData.dataset.method.toUpperCase()}`;
+    document.getElementById('modalSender').textContent = paymentData.dataset.sender;
+    document.getElementById('modalDate').textContent = paymentData.dataset.date;
+    document.getElementById('modalFile').textContent = paymentData.dataset.file;
+    
+    // Set status dengan badge
+    const statusElement = document.getElementById('modalStatus');
+    const status = paymentData.dataset.status;
+    if (status === 'completed') {
+        statusElement.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>';
+    } else if (status === 'pending') {
+        statusElement.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending</span>';
+    } else {
+        statusElement.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>';
+    }
+    
+    // Set gambar
+    const image = document.getElementById('modalProofImage');
+    image.src = paymentData.dataset.image;
+    image.onerror = function() {
+        this.src = '{{ url_for("static", filename="img/image-placeholder.jpg") }}';
+    };
+    
+    // Set link full size
+    document.getElementById('modalFullSizeLink').href = paymentData.dataset.image;
+    
+    // Reset zoom
+    resetImage();
+    
+    // Tampilkan modal
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+// Tutup modal bukti transfer
+function closeProofModal() {
+    const modal = document.getElementById('proofModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    resetImage();
+}
+
+// Buka modal tolak pembayaran
+function openRejectModal(paymentId) {
+    const rejectData = document.getElementById('rejectData' + paymentId);
+    const modal = document.getElementById('rejectModal');
+    
+    // Simpan payment ID untuk form submission
+    currentRejectPaymentId = paymentId;
+    
+    // Isi data ke modal
+    document.getElementById('rejectModalUserEmail').textContent = rejectData.dataset.email;
+    document.getElementById('rejectEmail').textContent = rejectData.dataset.email;
+    document.getElementById('rejectAmount').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(rejectData.dataset.amount);
+    document.getElementById('rejectMethod').textContent = rejectData.dataset.method.toUpperCase();
+    document.getElementById('rejectSender').textContent = rejectData.dataset.sender;
+    
+    // Set form action
+    document.getElementById('rejectForm').action = rejectData.dataset.actionUrl;
+    
+    // Reset form
+    document.getElementById('rejectionNotes').value = '';
+    
+    // Tampilkan modal
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+// Tutup modal tolak pembayaran
+function closeRejectModal() {
+    const modal = document.getElementById('rejectModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    currentRejectPaymentId = null;
+}
+
+// Fungsi zoom gambar
+function zoomImage(action) {
+    const image = document.getElementById('modalProofImage');
+    
+    if (action === 'in') {
+        currentImageScale += 0.2;
+    } else if (action === 'out') {
+        currentImageScale = Math.max(0.5, currentImageScale - 0.2);
+    }
+    
+    image.style.transform = `scale(${currentImageScale})`;
+}
+
+// Reset image zoom
+function resetImage() {
+    const image = document.getElementById('modalProofImage');
+    currentImageScale = 1;
+    image.style.transform = 'scale(1)';
+}
+
+// Close modal dengan ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeProofModal();
+        closeRejectModal();
+    }
+});
+
+// Handle form submission untuk reject
+document.getElementById('rejectForm').addEventListener('submit', function(e) {
+    const notes = document.getElementById('rejectionNotes').value.trim();
+    if (!notes) {
+        e.preventDefault();
+        alert('Harap berikan alasan penolakan!');
+        document.getElementById('rejectionNotes').focus();
+        return;
+    }
+    
+    if (!confirm('Apakah Anda yakin ingin menolak pembayaran ini?')) {
+        e.preventDefault();
+    }
+});
+
+// Initialize ketika DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox event listeners
+    const checkboxes = document.getElementsByClassName('payment-checkbox');
+    for (let checkbox of checkboxes) {
+        checkbox.addEventListener('change', updateSelectedCount);
+    }
+    
+    // Bulk form confirmation
+    const bulkForm = document.getElementById('bulkActionForm');
+    if (bulkForm) {
+        bulkForm.addEventListener('submit', function(e) {
+            const count = document.getElementById('selectedCount').textContent;
+            if (!confirm(`Approve ${count} pembayaran yang dipilih?`)) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Individual approve button confirmation
+    const approveButtons = document.getElementsByClassName('approve-btn');
+    for (let button of approveButtons) {
+        button.addEventListener('click', function(e) {
+            const amount = this.getAttribute('data-amount');
+            const email = this.getAttribute('data-email');
+            const formattedAmount = new Intl.NumberFormat('id-ID').format(amount);
+            
+            if (!confirm(`Setujui pembayaran Rp ${formattedAmount} dari ${email}?`)) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

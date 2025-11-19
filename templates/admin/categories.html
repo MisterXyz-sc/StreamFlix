@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola Kategori - Admin StreamFlix{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Kelola Kategori Video</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Add Category Form -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <form method="POST" action="{{ url_for('admin.add_category') }}">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Tambah Kategori Baru</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="name" class="form-label">Nama Kategori</label>
+                                            <input type="text" class="form-control" id="name" name="name" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="description" class="form-label">Deskripsi</label>
+                                            <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-plus-circle me-1"></i>Tambah Kategori
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Categories List -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nama Kategori</th>
+                                    <th>Deskripsi</th>
+                                    <th>Jumlah Video</th>
+                                    <th>Tanggal Dibuat</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ category.name }}</strong>
+                                    </td>
+                                    <td>{{ category.description or '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ category.videos|length }}</span>
+                                    </td>
+                                    <td>{{ category.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        {% if category.videos|length == 0 %}
+                                        <a href="{{ url_for('admin.delete_category', category_id=category.id) }}" 
+                                           class="btn btn-danger btn-sm" 
+                                           onclick="return confirm('Hapus kategori {{ category.name }}?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted small">Sedang digunakan</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if not categories %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-tags display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">Belum ada kategori</h4>
+                        <p class="text-muted">Tambahkan kategori pertama Anda di form atas.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

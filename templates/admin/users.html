@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Kelola User - Admin StreamFlix{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold">Kelola User</h1>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.users') }}?filter=active" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-person-check"></i> Aktif
+            </a>
+            <a href="{{ url_for('admin.users') }}?filter=inactive" class="btn btn-outline-warning btn-sm">
+                <i class="bi bi-person-x"></i> Nonaktif
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-people"></i> Semua
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Saldo</th>
+                            <th>Bergabung</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="{{ 'table-warning' if not user.is_active }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <strong>{{ user.email }}</strong>
+                                    {% if user.id == current_user.id %}
+                                        <span class="badge bg-info ms-2">Anda</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'warning' if user.role == 'admin' else 'primary' }}">
+                                    {{ user.role }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> Aktif
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-x-circle"></i> Nonaktif
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold text-success">Rp {{ "%.0f"|format(user.wallet_balance) }}</td>
+                            <td>
+                                <small>{{ user.created_at.strftime('%d %b %Y') }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" 
+                                            data-bs-toggle="modal" data-bs-target="#addBalanceModal{{ user.id }}"
+                                            {% if not user.is_active %}disabled{% endif %}>
+                                        <i class="bi bi-plus-circle"></i> Saldo
+                                    </button>
+                                    
+                                    {% if user.id != current_user.id %}
+                                    <button type="button" class="btn btn-{{ 'warning' if user.is_active else 'success' }}" 
+                                            onclick="toggleUser({{ user.id }}, '{{ user.email }}', {{ user.is_active|lower }})">
+                                        <i class="bi bi-{{ 'person-x' if user.is_active else 'person-check' }}"></i>
+                                    </button>
+                                    
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            onclick="deleteUser({{ user.id }}, '{{ user.email }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">Belum ada user</h4>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+{% for user in users %}
+<!-- Add Balance Modal -->
+<div class="modal fade" id="addBalanceModal{{ user.id }}" tabindex="-1" aria-labelledby="addBalanceModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addBalanceModalLabel{{ user.id }}">Tambah Saldo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_balance', user_id=user.id) }}">
+                <div class="modal-body">
+                    <p>Tambahkan saldo untuk user: <strong>{{ user.email }}</strong></p>
+                    {% if not user.is_active %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> User saat ini nonaktif
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label for="amount{{ user.id }}" class="form-label">Jumlah Saldo</label>
+                        <input type="number" class="form-control" id="amount{{ user.id }}" 
+                               name="amount" min="1000" step="1000" required
+                               placeholder="Masukkan jumlah saldo"
+                               {% if not user.is_active %}disabled{% endif %}>
+                        <div class="form-text">Minimum: Rp 1.000</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" {% if not user.is_active %}disabled{% endif %}>
+                        Tambah Saldo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalTitle">Konfirmasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="confirmModalBody">
+                <!-- Content will be filled by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Existing styles tetap... */
+
+/* New styles untuk action buttons */
+.btn-group .btn {
+    border-radius: 6px !important;
+    margin: 1px;
+}
+
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        margin: 2px 0;
+        border-radius: 6px !important;
+    }
+}
+</style>
+
+<script>
+// Fungsi untuk toggle user status
+function toggleUser(userId, userEmail, isCurrentlyActive) {
+    const action = isCurrentlyActive ? 'nonaktifkan' : 'aktifkan';
+    const modalTitle = isCurrentlyActive ? 'Nonaktifkan User' : 'Aktifkan User';
+    const modalBody = isCurrentlyActive 
+        ? `Apakah Anda yakin ingin menonaktifkan user <strong>${userEmail}</strong>? User tidak akan bisa login.`
+        : `Apakah Anda yakin ingin mengaktifkan user <strong>${userEmail}</strong>?`;
+    
+    // Set modal content
+    document.getElementById('confirmModalTitle').textContent = modalTitle;
+    document.getElementById('confirmModalBody').innerHTML = modalBody;
+    
+    // Set confirm action
+    document.getElementById('confirmActionBtn').onclick = function() {
+        window.location.href = `/admin/toggle_user/${userId}`;
+    };
+    
+    // Show modal
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    confirmModal.show();
+}
+
+// Fungsi untuk delete user
+function deleteUser(userId, userEmail) {
+    // Set modal content
+    document.getElementById('confirmModalTitle').textContent = 'Hapus User';
+    document.getElementById('confirmModalBody').innerHTML = `
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong>PERINGATAN!</strong> Tindakan ini tidak dapat dibatalkan!
+        </div>
+        <p>Apakah Anda yakin ingin menghapus user <strong>${userEmail}</strong> secara permanen?</p>
+        <ul class="text-danger small">
+            <li>Semua data user akan dihapus</li>
+            <li>Riwayat pembayaran akan dihapus</li>
+            <li>Akses video akan dihapus</li>
+        </ul>
+    `;
+    
+    // Set confirm action
+    document.getElementById('confirmActionBtn').onclick = function() {
+        window.location.href = `/admin/delete_user/${userId}`;
+    };
+    
+    // Change confirm button color
+    document.getElementById('confirmActionBtn').className = 'btn btn-danger';
+    
+    // Show modal
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    confirmModal.show();
+}
+
+// Filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const filter = urlParams.get('filter');
+    
+    // Highlight active filter
+    if (filter === 'active') {
+        document.querySelector('a[href*="filter=active"]').classList.add('active');
+    } else if (filter === 'inactive') {
+        document.querySelector('a[href*="filter=inactive"]').classList.add('active');
+    } else {
+        document.querySelector('a[href*="admin.users"]').classList.add('active');
+    }
+});
+</script>
+{% endblock %}

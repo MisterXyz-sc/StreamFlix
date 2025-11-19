@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-megaphone me-2"></i>Kelola Pengumuman</h4>
+                    <a href="{{ url_for('admin.add_announcement') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>Tambah Pengumuman
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if announcements %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Judul</th>
+                                    <th>Warna Teks</th>
+                                    <th>Style Teks</th>
+                                    <th>Status</th>
+                                    <th>Tanggal Dibuat</th>
+                                    <th>Terakhir Diupdate</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for announcement in announcements %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ announcement.title }}</strong>
+                                        {% if announcement.content|length > 100 %}
+                                        <br><small class="text-muted">{{ announcement.content[:100] }}...</small>
+                                        {% else %}
+                                        <br><small class="text-muted">{{ announcement.content }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="color-preview border rounded" 
+                                                 style="width: 24px; height: 24px; background-color: {{ announcement.text_color or '#ffffff' }};"
+                                                 title="{{ announcement.text_color or '#ffffff' }}">
+                                            </div>
+                                            <small class="text-muted">{{ announcement.text_color or '#ffffff' }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {% if announcement.text_style == 'normal' %}Normal
+                                            {% elif announcement.text_style == 'bold' %}Bold
+                                            {% elif announcement.text_style == 'italic' %}Italic
+                                            {% elif announcement.text_style == 'underline' %}Underline
+                                            {% elif announcement.text_style == 'bold italic' %}Bold+Italic
+                                            {% else %}Normal{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if announcement.is_active %}
+                                        <span class="badge bg-success">Aktif</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Nonaktif</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ announcement.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>{{ announcement.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('admin.edit_announcement', announcement_id=announcement.id) }}" 
+                                               class="btn btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{{ url_for('admin.toggle_announcement', announcement_id=announcement.id) }}" 
+                                               class="btn btn-outline-{{ 'warning' if announcement.is_active else 'success' }}" 
+                                               title="{{ 'Nonaktifkan' if announcement.is_active else 'Aktifkan' }}">
+                                                <i class="bi bi-{{ 'eye-slash' if announcement.is_active else 'eye' }}"></i>
+                                            </a>
+                                            <a href="{{ url_for('admin.delete_announcement', announcement_id=announcement.id) }}" 
+                                               class="btn btn-outline-danger" 
+                                               onclick="return confirm('Yakin ingin menghapus pengumuman ini?')"
+                                               title="Hapus">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-megaphone display-1 text-muted"></i>
+                        <h5 class="mt-3 text-muted">Belum ada pengumuman</h5>
+                        <p class="text-muted">Mulai dengan membuat pengumuman pertama</p>
+                        <a href="{{ url_for('admin.add_announcement') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>Tambah Pengumuman
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.color-preview {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.color-preview:hover {
+    transform: scale(1.1);
+}
+
+.table td {
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

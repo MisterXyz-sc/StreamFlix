@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Tambah Pengumuman Baru</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Judul Pengumuman</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   placeholder="Masukkan judul pengumuman" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Konten Pengumuman</label>
+                            <textarea class="form-control" id="content" name="content" 
+                                      rows="10" placeholder="Tulis konten pengumuman di sini..." 
+                                      style="font-family: 'Courier New', monospace;" required></textarea>
+                            <div class="form-text">
+                                Gunakan format markdown sederhana. Baris baru akan dipertahankan.
+                            </div>
+                        </div>
+
+                        <!-- Pilihan Warna Teks -->
+                        <div class="mb-3">
+                            <label for="text_color" class="form-label">Warna Teks</label>
+                            <div class="row g-2 mb-3">
+                                <div class="col-auto">
+                                    <input type="color" class="form-control form-control-color" id="text_color" 
+                                           name="text_color" value="#ffffff" title="Pilih warna teks">
+                                </div>
+                                <div class="col-auto">
+                                    <select class="form-select" id="color_presets" onchange="setColorPreset(this.value)">
+                                        <option value="">Preset Warna</option>
+                                        <option value="#ffffff" data-color="#ffffff">⚪ Putih</option>
+                                        <option value="#ff0000" data-color="#ff0000">🔴 Merah</option>
+                                        <option value="#00ff00" data-color="#00ff00">🟢 Hijau</option>
+                                        <option value="#0000ff" data-color="#0000ff">🔵 Biru</option>
+                                        <option value="#ffff00" data-color="#ffff00">🟡 Kuning</option>
+                                        <option value="#ff00ff" data-color="#ff00ff">🟣 Magenta</option>
+                                        <option value="#00ffff" data-color="#00ffff">🔵 Cyan</option>
+                                        <option value="#ffa500" data-color="#ffa500">🟠 Oranye</option>
+                                        <option value="#800080" data-color="#800080">🟣 Ungu</option>
+                                        <option value="#ff4500" data-color="#ff4500">🔴 Merah Oranye</option>
+                                        <option value="#32cd32" data-color="#32cd32">🟢 Hijau Lime</option>
+                                        <option value="#1e90ff" data-color="#1e90ff">🔵 Biru Dodger</option>
+                                        <option value="#ffd700" data-color="#ffd700">🟡 Kuning Emas</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <div id="selected_color" class="border rounded p-2" style="background-color: #ffffff; width: 40px; height: 38px;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Preview Warna Preset -->
+                            <div class="preset-colors mt-2">
+                                <small class="text-muted d-block mb-2">Pilih cepat:</small>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ffffff; color: #000; border: 1px solid #ccc;" onclick="setColorPreset('#ffffff')" title="Putih">⚪</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ff0000; color: white;" onclick="setColorPreset('#ff0000')" title="Merah">🔴</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #00ff00; color: #000;" onclick="setColorPreset('#00ff00')" title="Hijau">🟢</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #0000ff; color: white;" onclick="setColorPreset('#0000ff')" title="Biru">🔵</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ffff00; color: #000;" onclick="setColorPreset('#ffff00')" title="Kuning">🟡</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ff00ff; color: white;" onclick="setColorPreset('#ff00ff')" title="Magenta">🟣</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #00ffff; color: #000;" onclick="setColorPreset('#00ffff')" title="Cyan">🔵</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ffa500; color: white;" onclick="setColorPreset('#ffa500')" title="Oranye">🟠</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #800080; color: white;" onclick="setColorPreset('#800080')" title="Ungu">🟣</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ff4500; color: white;" onclick="setColorPreset('#ff4500')" title="Merah Oranye">🔴</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #32cd32; color: white;" onclick="setColorPreset('#32cd32')" title="Hijau Lime">🟢</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #1e90ff; color: white;" onclick="setColorPreset('#1e90ff')" title="Biru Dodger">🔵</button>
+                                    <button type="button" class="btn btn-sm preset-color-btn" style="background-color: #ffd700; color: #000;" onclick="setColorPreset('#ffd700')" title="Kuning Emas">🟡</button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-text">
+                                Pilih warna teks untuk pengumuman. Warna akan ditampilkan di modal pengumuman.
+                            </div>
+                        </div>
+
+                        <!-- Pilihan Style Teks -->
+                        <div class="mb-3">
+                            <label class="form-label">Style Teks</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="text_style" name="text_style">
+                                        <option value="normal">Normal</option>
+                                        <option value="bold">Bold (Tebal)</option>
+                                        <option value="italic">Italic (Miring)</option>
+                                        <option value="underline">Underline (Garis Bawah)</option>
+                                        <option value="bold italic">Bold + Italic</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <div id="style_preview" class="border rounded p-2 bg-dark">
+                                        <small>Preview: <span id="preview_text" style="font-family: 'Courier New', monospace;">Teks contoh pengumuman</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                Pilih style teks untuk pengumuman.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                            <label class="form-check-label" for="is_active">Aktifkan pengumuman</label>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i>Simpan Pengumuman
+                            </button>
+                            <a href="{{ url_for('admin.announcements') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Kembali
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript untuk Color Picker -->
+<script>
+function setColorPreset(value) {
+    if (value) {
+        document.getElementById('text_color').value = value;
+        document.getElementById('selected_color').style.backgroundColor = value;
+        document.getElementById('color_presets').value = value;
+    }
+}
+
+// Update color preview
+document.getElementById('text_color').addEventListener('input', function() {
+    document.getElementById('selected_color').style.backgroundColor = this.value;
+    document.getElementById('color_presets').value = this.value;
+});
+
+// Update style preview
+function updateStylePreview() {
+    const style = document.getElementById('text_style').value;
+    const previewText = document.getElementById('preview_text');
+    
+    // Reset semua style
+    previewText.style.fontWeight = 'normal';
+    previewText.style.fontStyle = 'normal';
+    previewText.style.textDecoration = 'none';
+    
+    // Apply style berdasarkan pilihan
+    if (style.includes('bold')) {
+        previewText.style.fontWeight = 'bold';
+    }
+    if (style.includes('italic')) {
+        previewText.style.fontStyle = 'italic';
+    }
+    if (style.includes('underline')) {
+        previewText.style.textDecoration = 'underline';
+    }
+}
+
+// Event listener untuk style change
+document.getElementById('text_style').addEventListener('change', updateStylePreview);
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('selected_color').style.backgroundColor = document.getElementById('text_color').value;
+    updateStylePreview();
+    
+    // Efek hover untuk preset color buttons
+    document.querySelectorAll('.preset-color-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.1)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        btn.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+});
+</script>
+
+<style>
+.form-control-color {
+    width: 70px;
+    height: 38px;
+    padding: 2px;
+}
+
+.preset-color-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.preset-color-btn:hover {
+    border-color: #000;
+    transform: scale(1.1);
+}
+
+#selected_color {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

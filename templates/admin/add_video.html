@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah Video - Admin StreamFlix{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Tambah Video Baru</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.add_video') }}" enctype="multipart/form-data">
+                        <!-- Basic Information -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Informasi Dasar</h6>
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Judul Video <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Deskripsi Video</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Deskripsi tentang video ini..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Video Type Selection -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Tipe Video</h6>
+                            <div class="mb-3">
+                                <label for="video_type" class="form-label">Pilih Tipe Video <span class="text-danger">*</span></label>
+                                <select class="form-select" id="video_type" name="video_type" onchange="toggleVideoFields()" required>
+                                    <option value="embed">Embed URL (YouTube, DoodStream, dll)</option>
+                                    <option value="upload">Upload File Video (Cloudinary)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Embed URL Fields -->
+                        <div id="embedFields">
+                            <div class="mb-4">
+                                <h6 class="border-bottom pb-2">Embed URL Settings</h6>
+                                <div class="mb-3">
+                                    <label for="embed_url" class="form-label">URL Embed Video <span class="text-danger">*</span></label>
+                                    <input type="url" class="form-control" id="embed_url" name="embed_url" 
+                                           placeholder="https://dood-hd.com/e/jnnZjybm">
+                                    <div class="form-text">Masukkan URL embed player video (YouTube, DoodStream, dll)</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="thumbnail_url" class="form-label">URL Thumbnail</label>
+                                    <input type="url" class="form-control" id="thumbnail_url" name="thumbnail_url"
+                                           placeholder="https://example.com/thumbnail.jpg">
+                                    <div class="form-text">Opsional: URL gambar thumbnail video</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Upload Fields -->
+                        <div id="uploadFields" style="display: none;">
+                            <div class="mb-4">
+                                <h6 class="border-bottom pb-2">Upload File Video</h6>
+                                <div class="mb-3">
+                                    <label for="video_file" class="form-label">File Video <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" id="video_file" name="video_file" 
+                                           accept="video/*" onchange="previewVideoFile(this)">
+                                    <div class="form-text">
+                                        Format yang didukung: MP4, MOV, AVI, MKV, WEBM, FLV, WMV<br>
+                                        Maksimal ukuran: 100MB
+                                    </div>
+                                </div>
+
+                                <div id="videoPreview" class="mb-3" style="display: none;">
+                                    <label class="form-label">Preview Video:</label>
+                                    <div class="border rounded p-3 bg-light">
+                                        <video id="previewPlayer" controls width="100%" style="max-height: 200px;">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                        <div class="mt-2">
+                                            <small class="text-muted" id="fileInfo"></small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category and Pricing -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Kategori & Harga</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="category_id" class="form-label">Kategori</label>
+                                        <select class="form-select" id="category_id" name="category_id">
+                                            <option value="">Pilih Kategori</option>
+                                            {% for category in categories %}
+                                            <option value="{{ category.id }}">{{ category.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="form-text">Pilih kategori video</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="price" class="form-label">Harga (Rp)</label>
+                                        <input type="number" class="form-control" id="price" name="price" 
+                                               value="0" min="0" step="100">
+                                        <div class="form-text">Isi 0 untuk video gratis</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Premium Settings -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Pengaturan Premium</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="is_premium" name="is_premium">
+                                            <label class="form-check-label" for="is_premium">
+                                                Video Premium
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Centang jika video berbayar</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end border-top pt-3">
+                            <a href="{{ url_for('admin.videos') }}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-arrow-left me-1"></i>Kembali
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i>Simpan Video
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle me-2"></i>Informasi:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Embed URL:</strong> Untuk video dari platform seperti YouTube, DoodStream, dll</li>
+                        <li><strong>Upload File:</strong> Untuk upload video langsung ke Cloudinary (lebih aman)</li>
+                        <li>Video premium memerlukan pembayaran untuk diakses</li>
+                        <li>Video gratis dapat diakses oleh semua user</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleVideoFields() {
+    const videoType = document.getElementById('video_type').value;
+    const embedFields = document.getElementById('embedFields');
+    const uploadFields = document.getElementById('uploadFields');
+    const embedUrl = document.getElementById('embed_url');
+    const videoFile = document.getElementById('video_file');
+
+    if (videoType === 'embed') {
+        embedFields.style.display = 'block';
+        uploadFields.style.display = 'none';
+        embedUrl.required = true;
+        videoFile.required = false;
+        // Clear file input when switching to embed
+        videoFile.value = '';
+        hideVideoPreview();
+    } else {
+        embedFields.style.display = 'none';
+        uploadFields.style.display = 'block';
+        embedUrl.required = false;
+        videoFile.required = true;
+        // Clear embed URL when switching to upload
+        embedUrl.value = '';
+    }
+}
+
+function previewVideoFile(input) {
+    const preview = document.getElementById('videoPreview');
+    const player = document.getElementById('previewPlayer');
+    const fileInfo = document.getElementById('fileInfo');
+
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const url = URL.createObjectURL(file);
+        
+        player.src = url;
+        fileInfo.textContent = `File: ${file.name} | Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB | Type: ${file.type}`;
+        preview.style.display = 'block';
+    } else {
+        hideVideoPreview();
+    }
+}
+
+function hideVideoPreview() {
+    const preview = document.getElementById('videoPreview');
+    const player = document.getElementById('previewPlayer');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    player.src = '';
+    fileInfo.textContent = '';
+    preview.style.display = 'none';
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleVideoFields();
+    
+    // Add real-time validation for price and premium
+    const priceInput = document.getElementById('price');
+    const premiumCheckbox = document.getElementById('is_premium');
+    
+    premiumCheckbox.addEventListener('change', function() {
+        if (this.checked && parseFloat(priceInput.value) === 0) {
+            priceInput.value = '5000';
+        }
+    });
+    
+    priceInput.addEventListener('input', function() {
+        if (parseFloat(this.value) > 0) {
+            premiumCheckbox.checked = true;
+        }
+    });
+});
+</script>
+
+<style>
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.border-bottom {
+    border-color: #dee2e6 !important;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.btn {
+    border-radius: 6px;
+}
+
+.form-control, .form-select {
+    border-radius: 6px;
+}
+</style>
+{% endblock %}
